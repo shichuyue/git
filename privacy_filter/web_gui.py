@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 
 import flask
 
@@ -23,22 +24,36 @@ process_lock = threading.Lock()
 latest_stats = {"total": 0, "blocked": 0, "ua_masked": 0, "headers_cleaned": 0, "cookies_filtered": 0}
 
 
-# ---- 自动查找 mitmdump ----
+def _free_port(port):
+    """释放指定端口上残留的进程"""
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"], capture_output=True, text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
+        for line in result.stdout.splitlines():
+            if f":{port} " in line and "LISTENING" in line:
+                parts = line.strip().split()
+                pid = parts[-1]
+                subprocess.run(["taskkill", "/F", "/PID", pid],
+                               capture_output=True,
+                               creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
+    except Exception:
+        pass
+
+
 def _find_mitmdump():
     """尝试多个路径查找 mitmdump.exe"""
     candidates = [
-        # Microsoft Store Python 的 local-packages Scripts 目录
         os.path.join(os.environ.get("LOCALAPPDATA", ""),
                      "Packages", "PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0",
                      "LocalCache", "local-packages", "Python313", "Scripts", "mitmdump.exe"),
         os.path.join(os.environ.get("LOCALAPPDATA", ""),
                      "Packages", "PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0",
                      "LocalCache", "local-packages", "Python312", "Scripts", "mitmdump.exe"),
-        # 常规 Python 安装
         os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Python", "Python313", "Scripts", "mitmdump.exe"),
         os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Python", "Python312", "Scripts", "mitmdump.exe"),
         os.path.join("C:", os.sep, "Python313", "Scripts", "mitmdump.exe"),
-        # 如果系统 PATH 里有
         "mitmdump",
         "mitmdump.exe",
     ]
@@ -149,7 +164,7 @@ INDEX_HTML = """<!DOCTYPE html>
 </head>
 <body>
   <header>
-    <h1><span>▣</span> 隐私流量拦截代理</h1>
+    <h1><span>隐私流量拦截代理</span></h1>
     <div class="header-right">
       <div class="status-indicator">
         <span class="status-dot" id="statusDot"></span>
@@ -253,7 +268,7 @@ INDEX_HTML = """<!DOCTYPE html>
           document.getElementById("statHeaders").textContent = s.headers_cleaned || 0;
           document.getElementById("statCookies").textContent = s.cookies_filtered || 0;
         }
-      } catch(e) { /* ignore */ }
+      } catch(e) {}
     }
 
     window.onload = function() {
@@ -272,6 +287,8 @@ INDEX_HTML = """<!DOCTYPE html>
 </html>"""
 
 
+# ---- API routes ----
+
 @app.route("/")
 def index():
     return flask.render_template_string(INDEX_HTML)
@@ -281,7 +298,6 @@ def index():
 def status():
     global mitm_process, latest_stats
     running = mitm_process is not None and mitm_process.poll() is None
-    # 如果进程意外退出了，清理子进程引用
     if mitm_process is not None and mitm_process.poll() is not None:
         mitm_process = None
         running = False
@@ -289,15 +305,15 @@ def status():
 
 
 @app.route("/api/start", methods=["POST"])
-    # 启动前先释放端口
-    _free_port(PROXY_PORT)
 def start_proxy():
     global mitm_process
     with process_lock:
         if mitm_process and mitm_process.poll() is None:
             return flask.jsonify({"ok": True, "message": "already running"})
 
-        # 清理旧日志
+        # 释放旧端口
+        _free_port(PROXY_PORT)
+
         os.makedirs(LOGS_DIR, exist_ok=True)
         try:
             with open(REALTIME_LOG, "w") as f:
@@ -305,50 +321,38 @@ def start_proxy():
         except OSError:
             pass
 
-        # 查找 mitmdump
         mitmdump_path = _find_mitmdump()
         script_path = os.path.join(BASE_DIR, "proxy_script.py")
 
+        import shutil
         if not os.path.exists(mitmdump_path) and mitmdump_path in ("mitmdump", "mitmdump.exe"):
-            # 检查 PATH
-            import shutil
             if not shutil.which(mitmdump_path):
-                return flask.jsonify({
-                    "ok": False,
-                    "error": f"mitmdump 未找到。请运行: pip install mitmproxy"
-                }), 500
+                return flask.jsonify({"ok": False, "error": "mitmdump not found"}), 500
 
         try:
             startup_info = None
             if sys.platform == "win32":
                 startup_info = subprocess.STARTUPINFO()
                 startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                startup_info.wShowWindow = 0  # SW_HIDE
+                startup_info.wShowWindow = 0
 
             mitm_process = subprocess.Popen(
-                [mitmdump_path,
-                 "-s", script_path,
-                 "--listen-port", str(PROXY_PORT),
-                 "--set", "block_global=false"],
+                [mitmdump_path, "-s", script_path,
+                 "--listen-port", str(PROXY_PORT), "--set", "block_global=false"],
                 cwd=BASE_DIR,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 startupinfo=startup_info,
             )
-            # 等 1 秒确认进程还在
-            import time
             time.sleep(1)
             if mitm_process.poll() is not None:
                 return flask.jsonify({
                     "ok": False,
-                    "error": f"mitmdump 启动后立即退出 (exit code={mitm_process.poll()})，请检查端口 8080 是否被占用"
+                    "error": "mitmdump 启动后立即退出，请检查端口 8080 是否被占用"
                 }), 500
             return flask.jsonify({"ok": True, "message": "proxy started"})
         except FileNotFoundError as e:
-            return flask.jsonify({
-                "ok": False,
-                "error": f"mitmdump 启动失败: {e}"
-            }), 500
+            return flask.jsonify({"ok": False, "error": f"启动失败: {e}"}), 500
 
 
 @app.route("/api/stop", methods=["POST"])
@@ -356,10 +360,7 @@ def stop_proxy():
     global mitm_process
     with process_lock:
         if mitm_process and mitm_process.poll() is None:
-            if sys.platform == "win32":
-                mitm_process.terminate()
-            else:
-                mitm_process.terminate()
+            mitm_process.terminate()
             try:
                 mitm_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -374,7 +375,6 @@ def get_logs():
     global latest_stats
     pos = flask.request.args.get("pos", 0, type=int)
     logs, new_pos = _read_logs(pos)
-    # 更新统计信息
     for entry in logs:
         if "total" in entry:
             latest_stats["total"] = entry["total"]
@@ -386,35 +386,13 @@ def get_logs():
             latest_stats["headers_cleaned"] = entry["headers_cleaned"]
         if "cookies_filtered" in entry:
             latest_stats["cookies_filtered"] = entry["cookies_filtered"]
-
-    # 也要从 action 字段统计拦截数
-    for entry in logs:
         if entry.get("action") == "BLOCK":
             latest_stats["blocked"] = latest_stats.get("blocked", 0) + 1
-
     return flask.jsonify({"logs": logs, "pos": new_pos, "stats": latest_stats})
 
 
 if __name__ == "__main__":
-    print(f"隐私流量拦截代理 Web 界面启动中...")
+    print("隐私流量拦截代理 Web 界面启动中...")
     print(f"打开浏览器访问 http://127.0.0.1:{WEB_PORT}")
     print(f"确保系统代理已设置为 127.0.0.1:{PROXY_PORT}")
-def _free_port(port):
-    \"\"\"尝试释放指定端口上残留的进程\"\"\"
-    try:
-        result = subprocess.run(
-            ["netstat", "-ano"], capture_output=True, text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        )
-        for line in result.stdout.splitlines():
-            if f":{port} " in line and "LISTENING" in line:
-                parts = line.strip().split()
-                pid = parts[-1]
-                subprocess.run(["taskkill", "/F", "/PID", pid],
-                               capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
-    except Exception:
-        pass
-
-
     app.run(host="127.0.0.1", port=WEB_PORT, debug=False, threaded=True)
-
