@@ -1,0 +1,254 @@
+﻿# 隐私拦截黑名单 - 广告/统计/追踪域名
+# 每行一个域名，支持子域名匹配（如 example.com 同时匹配 a.example.com）
+
+# ---- Google 追踪/广告 ----
+google-analytics.com
+googletagmanager.com
+googlesyndication.com
+googletagservices.com
+doubleclick.net
+adservice.google.com
+pagead2.googlesyndication.com
+googleadservices.com
+googleads.g.doubleclick.net
+googlevideo.com
+googleoptimize.com
+googleusercontent.com/gadgets
+analytics.google.com
+
+# ---- Facebook / Meta ----
+facebook.net
+connect.facebook.net
+pixel.facebook.com
+fbcdn.net
+graph.facebook.com
+www.facebook.com/tr
+web.facebook.com/tr
+mqtt-mini.facebook.com
+crashlyticsreports-pa.googleapis.com
+meta.com
+atdmt.com
+
+# ---- 阿里系 / 友盟 ----
+umeng.com
+umtrack.com
+alibaba.com
+aliyuncs.com (umeng)
+ucweb.com
+cnzz.com
+cnzz.mmstat.com
+log.mmstat.com
+mmstat.com
+sdkapp.uve.uc.cn
+g.alicdn.com/um
+wbapp.umeng.com
+ma.taobao.com
+nbsdk-baichuan.taobao.com
+muv.taobao.com
+acs.m.taobao.com
+
+# ---- 腾讯系 ----
+qq.com (analytics)
+pingjs.qq.com
+qopensdk.qq.com
+bugly.qq.com
+tiss.qq.com
+vv.video.qq.com
+beacon.qq.com
+oth.str.beacon.qq.com
+btrace.qq.com
+wsd.qq.com
+h.trace.qq.com
+analytics.qq.com
+otheve.beacon.qq.com
+oth.eve.mdt.qq.com
+gifttx.qq.com
+
+# ---- 百度 ----
+baidu.com (analytics)
+hm.baidu.com
+log.baidu.com
+nsclick.baidu.com
+cpro.baidu.com
+pos.baidu.com
+cbjs.baidu.com
+dlswbr.baidu.com
+sp0.baidu.com
+eclick.baidu.com
+wangmeng.baidu.com
+znsv.baidu.com
+dxp.baidu.com
+ss.bdstatic.com
+cm.baidu.com
+s.baidu.com
+dup.baidustatic.com
+cdb.cloud.baidu.com
+ckmap.baidu.com
+cstm.baidu.com
+ma.baidu.com
+
+# ---- 字节跳动 / TikTok ----
+toutiao.com
+snssdk.com
+sg.com
+pangle.com
+pangleglobal.com
+csdn.toutiao.com
+i.snssdk.com
+mon.snssdk.com
+log.snssdk.com
+analytics.toutiao.com
+sf1-ttcdn-tos.pstatp.com
+sf3-ttcdn-tos.pstatp.com
+api.tiktokv.com
+analytics.tiktok.com
+ads.tiktok.com
+business-api.tiktok.com
+
+# ---- 综合广告网络 ----
+amazon-adsystem.com
+adnxs.com
+rubiconproject.com
+openx.net
+pubmatic.com
+criteo.com
+criteo.net
+casalemedia.com
+moatads.com
+adsrvr.org
+advertising.com
+agkn.com
+bluekai.com
+exelator.com
+demdex.net
+krxd.net
+rlcdn.com
+turn.com
+w55c.net
+zemanta.com
+contextweb.com
+sharethrough.com
+indexww.com
+sovrn.com
+lijit.com
+bidsxchange.com
+adzerk.net
+bidswitch.net
+improvedigital.com
+adform.com
+rtbhouse.com
+rtbcore.com
+adscale.de
+adition.com
+smartyads.com
+appnexus.com
+adpushup.com
+adpushup.org
+adpushup.io
+
+# ---- 数据分析 / 埋点 SDK ----
+hotjar.com
+hotjar.io
+mouseflow.com
+fullstory.com
+heap.io
+amplitude.com
+mixpanel.com
+segment.io
+segment.com
+segmentcdn.com
+branch.io
+appsflyer.com
+adjust.com
+adjust.io
+kochava.com
+flurry.com
+count.ly
+matomo.org
+ps.eyeota.net
+quantserve.com
+scorecardresearch.com
+scorecardresearch.com.comscore.com
+comscore.com
+comscoredatagm.com
+nr-data.net
+newrelic.com
+datadoghq.com
+datadog-agent
+dynatrace.com
+dynatrace.net
+rumbletalk.com
+appdynamics.com
+optimizely.com
+optimizely.com.edgesuite.net
+vwo.com
+crazyegg.com
+clicky.com
+statcounter.com
+histats.com
+statisfy.net
+getclicky.com
+wpstats.com
+gatherin.net
+
+# ---- 推送通知 / 邮件追踪 ----
+onesignal.com
+pushwoosh.com
+pushbullet.com
+sendpulse.com
+sendgrid.net
+mailtrack.io
+mailchimp.com
+email-c.constantcontact.com
+list-manage.com
+campaign-archive.com
+mandrillapp.com
+
+# ---- 联盟营销 ----
+shareasale.com
+affiliate-program.amazon.com
+skimlinks.com
+skimresources.com
+viglink.com
+impactradius.com
+linksynergy.com
+tradedoubler.com
+awin.com
+cj.com
+ebayadvertising.com
+rakutenmarketing.com
+
+# ---- 跨站追踪 / 社交按钮 ----
+addthis.com
+addthisedge.com
+sharethis.com
+sumo.com
+curalate.com
+juicer.io
+elfsight.com
+
+# ---- CDN 层面追踪 ----
+cdn.optimizely.com
+edge.quantserve.com
+e.queryly.com
+cloudfront.net (tracking subdomain)
+
+# ---- 国内其他 ----
+sina.com.cn (analytics)
+163.com (analytics)
+sohu.com (analytics)
+360.cn (analytics)
+csdn.net (analytics)
+zhihu.com (analytics)
+bilibili.com (analytics)
+douyin.com (analytics)
+kuaishou.com (analytics)
+weibo.com (analytics)
+so.com (analytics)
+haosou.com (analytics)
+wandoujia.com
+xiaomi.com (analytics)
+mi.com (analytics)
+oppomobile.com
+vivo.com.cn
+heytap.com

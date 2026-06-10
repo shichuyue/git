@@ -1,0 +1,67 @@
+﻿# 隐私拦截白名单 - 以下域名即使部分匹配黑名单也不拦截
+# 每行一个域名，子域名自动匹配
+
+# Google 核心服务
+google.com
+googleapis.com
+gstatic.com
+googleusercontent.com
+googlehosted.com
+blogger.com
+youtube.com
+ytimg.com
+
+# Microsoft 核心服务
+microsoft.com
+microsoftonline.com
+live.com
+office.com
+office365.com
+azure.com
+azure.net
+msn.com
+bing.com
+windows.net
+windows.com
+
+# GitHub
+github.com
+githubusercontent.com
+githubassets.com
+
+# 社交 (完整域名)
+twitter.com
+x.com
+t.co
+instagram.com
+linkedin.com
+reddit.com
+redditmedia.com
+redditstatic.com
+
+# 实用工具
+stackoverflow.com
+stackexchange.com
+npmjs.com
+npmjs.org
+unpkg.com
+cdnjs.com
+jsdelivr.net
+bootstrapcdn.com
+
+# 常用地图 / 支付
+map.baidu.com
+api.map.baidu.com
+openapi.baidu.com
+passport.baidu.com
+alipay.com
+alipayobjects.com
+alicdn.com
+paypal.com
+paypalobjects.com
+
+# 国内核心
+weixin.qq.com
+wx.qq.com
+open.weixin.qq.com
+mp.weixin.qq.com

@@ -1,0 +1,26 @@
+﻿# 隐私流量拦截代理 - Git忽略规则
+
+# 运行时生成
+logs/
+cert/
+*.log
+*.pem
+*.jsonl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Electron
+node_modules/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

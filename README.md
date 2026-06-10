@@ -6,7 +6,7 @@
 ## 技术栈
 - Python + mitmproxy 代理核心
 - Electron 桌面图形界面
-- OpenSSL PKI自签CA证书
+- mitmproxy自动生成CA证书
 - Git + GitHub 版本托管
 
 ## 运行步骤

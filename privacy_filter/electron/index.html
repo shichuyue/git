@@ -1,0 +1,399 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>隐私流量拦截代理</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0f1923;
+      color: #d1d5db;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Header */
+    header {
+      background: #1a2632;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #2a3a4a;
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    header h1 span {
+      color: #6366f1;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #6b7280;
+      transition: background 0.3s;
+    }
+    .status-dot.running { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    /* Buttons */
+    .btn {
+      padding: 7px 18px;
+      border: none; border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-start {
+      background: #22c55e; color: #000;
+    }
+    .btn-start:hover:not(:disabled) { background: #16a34a; }
+    .btn-stop {
+      background: #ef4444; color: #fff;
+    }
+    .btn-stop:hover:not(:disabled) { background: #dc2626; }
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      padding: 10px 24px;
+      background: #141f2b;
+      border-bottom: 1px solid #1e2d3d;
+      flex-shrink: 0;
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .stat-item .num {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #e5e7eb;
+      min-width: 32px;
+    }
+    .stat-item .label { color: #9ca3af; }
+    .stat-item .num.blocked { color: #ef4444; }
+    .stat-item .num.masked { color: #6366f1; }
+    .stat-item .num.cleaned { color: #f59e0b; }
+    .stat-item .num.passed { color: #22c55e; }
+
+    /* Main layout */
+    .main-content {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    /* Traffic log */
+    .traffic-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #1e2d3d;
+      min-width: 0;
+    }
+    .panel-header {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #6b7280;
+      background: #121c28;
+      border-bottom: 1px solid #1e2d3d;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .panel-header .clear-btn {
+      background: none; border: none;
+      color: #6b7280; cursor: pointer;
+      font-size: 12px;
+    }
+    .panel-header .clear-btn:hover { color: #e5e7eb; }
+
+    .log-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+      font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+      font-size: 12px;
+    }
+    .log-list::-webkit-scrollbar { width: 6px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 3px; }
+
+    .log-entry {
+      padding: 3px 16px;
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      line-height: 1.5;
+      border-bottom: 1px solid #0d1722;
+    }
+    .log-entry:hover { background: #1a2632; }
+    .log-entry .method {
+      font-weight: 600;
+      color: #60a5fa;
+      min-width: 48px;
+    }
+    .log-entry .action {
+      font-weight: 700;
+      min-width: 52px;
+      text-align: center;
+    }
+    .log-entry .action.block { color: #ef4444; }
+    .log-entry .action.pass { color: #22c55e; }
+    .log-entry .host {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #d1d5db;
+    }
+    .log-entry .status {
+      min-width: 32px;
+      text-align: right;
+      color: #9ca3af;
+    }
+    .log-entry .time {
+      color: #4b5563;
+      min-width: 70px;
+      text-align: right;
+      font-size: 11px;
+    }
+    /* App logs */
+    .app-log-panel {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .app-log-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+    }
+    .app-log-list::-webkit-scrollbar { width: 6px; }
+    .app-log-list::-webkit-scrollbar-track { background: transparent; }
+    .app-log-list::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 3px; }
+
+    .app-log-entry {
+      padding: 2px 12px;
+      color: #9ca3af;
+      line-height: 1.6;
+      border-bottom: 1px solid #0d1722;
+    }
+    .app-log-entry .al-time { color: #4b5563; margin-right: 6px; }
+    .app-log-entry .al-error { color: #ef4444; }
+    .app-log-entry .al-info { color: #9ca3af; }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #4b5563;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>▣</span> 隐私流量拦截代理</h1>
+    <div class="header-right">
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">未启动</span>
+      </div>
+      <button class="btn btn-start" id="btnStart">启动代理</button>
+      <button class="btn btn-stop" id="btnStop" disabled>停止代理</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-item"><span class="num" id="statTotal">0</span><span class="label">请求总数</span></div>
+    <div class="stat-item"><span class="num blocked" id="statBlocked">0</span><span class="label">已拦截</span></div>
+    <div class="stat-item"><span class="num masked" id="statUA">0</span><span class="label">UA伪装</span></div>
+    <div class="stat-item"><span class="num cleaned" id="statHeaders">0</span><span class="label">去头</span></div>
+    <div class="stat-item"><span class="num passed" id="statCookies">0</span><span class="label">Cookie过滤</span></div>
+  </div>
+
+  <div class="main-content">
+    <div class="traffic-panel">
+      <div class="panel-header">
+        <span>实时流量日志</span>
+        <button class="clear-btn" id="clearLogs">清空</button>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="empty-state">启动代理后，流量日志将在此显示</div>
+      </div>
+    </div>
+    <div class="app-log-panel">
+      <div class="panel-header">系统日志</div>
+      <div class="app-log-list" id="appLogList">
+        <div class="empty-state">---</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const proxyAPI = window.proxyAPI;
+    const logList = document.getElementById("logList");
+    const appLogList = document.getElementById("appLogList");
+    const btnStart = document.getElementById("btnStart");
+    const btnStop = document.getElementById("btnStop");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const statTotal = document.getElementById("statTotal");
+    const statBlocked = document.getElementById("statBlocked");
+    const statUA = document.getElementById("statUA");
+    const statHeaders = document.getElementById("statHeaders");
+    const statCookies = document.getElementById("statCookies");
+
+    let stats = { total: 0, blocked: 0, ua_masked: 0, headers_cleaned: 0, cookies_filtered: 0 };
+    let isRunning = false;
+
+    function updateUI(running) {
+      isRunning = running;
+      btnStart.disabled = running;
+      btnStop.disabled = !running;
+      statusDot.className = "status-dot" + (running ? " running" : "");
+      statusText.textContent = running ? "运行中 (127.0.0.1:8080)" : "未启动";
+    }
+
+    function updateStats(s) {
+      if (s.total !== undefined) stats.total = s.total;
+      if (s.blocked !== undefined) stats.blocked = s.blocked;
+      if (s.ua_masked !== undefined) stats.ua_masked = s.ua_masked;
+      if (s.headers_cleaned !== undefined) stats.headers_cleaned = s.headers_cleaned;
+      if (s.cookies_filtered !== undefined) stats.cookies_filtered = s.cookies_filtered;
+      statTotal.textContent = stats.total;
+      statBlocked.textContent = stats.blocked;
+      statUA.textContent = stats.ua_masked;
+      statHeaders.textContent = stats.headers_cleaned;
+      statCookies.textContent = stats.cookies_filtered;
+    }
+
+    function addLogEntry(entry) {
+      if (logList.querySelector(".empty-state")) {
+        logList.innerHTML = "";
+      }
+      const div = document.createElement("div");
+      div.className = "log-entry";
+
+      const time = entry.timestamp ? entry.timestamp.slice(11, 19) : "";
+      const actionCls = entry.action === "BLOCK" ? "block" : "pass";
+      const statusCode = entry.status || "-";
+
+      div.innerHTML = `
+        <span class="method">${entry.method}</span>
+        <span class="action ${actionCls}">${entry.action}</span>
+        <span class="host" title="${entry.host}">${entry.host}</span>
+        <span class="status">${statusCode}</span>
+        <span class="time">${time}</span>
+      `;
+      logList.appendChild(div);
+
+      if (entry.action === "BLOCK") {
+        stats.blocked++;
+      } else {
+        stats.passed = (stats.passed || 0) + 1;
+      }
+      stats.total++;
+      statTotal.textContent = stats.total;
+      statBlocked.textContent = stats.blocked;
+
+      // Auto-scroll
+      logList.scrollTop = logList.scrollHeight;
+      // Keep last 500 entries
+      while (logList.childElementCount > 500) {
+        logList.removeChild(logList.firstChild);
+      }
+    }
+
+    function addAppLog(entry) {
+      if (appLogList.querySelector(".empty-state")) {
+        appLogList.innerHTML = "";
+      }
+      const div = document.createElement("div");
+      div.className = "app-log-entry";
+      const time = entry.timestamp ? entry.timestamp.slice(11, 19) : "";
+      const levelCls = entry.level === "error" ? "al-error" : "al-info";
+      div.innerHTML = `<span class="al-time">${time}</span><span class="${levelCls}">${entry.message}</span>`;
+      appLogList.appendChild(div);
+      appLogList.scrollTop = appLogList.scrollHeight;
+      while (appLogList.childElementCount > 200) {
+        appLogList.removeChild(appLogList.firstChild);
+      }
+    }
+
+    // Buttons
+    btnStart.addEventListener("click", async () => {
+      btnStart.disabled = true;
+      try {
+        await proxyAPI.start();
+      } catch (e) {
+        addAppLog({ timestamp: new Date().toISOString(), level: "error", message: "启动失败: " + e.message });
+        btnStart.disabled = false;
+      }
+    });
+
+    btnStop.addEventListener("click", async () => {
+      try {
+        await proxyAPI.stop();
+      } catch (e) {
+        addAppLog({ timestamp: new Date().toISOString(), level: "error", message: "停止失败: " + e.message });
+      }
+    });
+
+    document.getElementById("clearLogs").addEventListener("click", () => {
+      logList.innerHTML = `<div class="empty-state">日志已清空</div>`;
+    });
+
+    // IPC listeners
+    proxyAPI.onProxyStatus((data) => {
+      updateUI(data.running);
+      if (!data.running) {
+        // Reset button state if process died unexpectedly
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+      }
+    });
+
+    proxyAPI.onTrafficLog((entry) => {
+      addLogEntry(entry);
+    });
+
+    proxyAPI.onAppLog((entry) => {
+      addAppLog(entry);
+    });
+
+    // Initial status
+    proxyAPI.getStatus().then((data) => {
+      updateUI(data.running);
+    });
+
+    addAppLog({ timestamp: new Date().toISOString(), level: "info", message: "应用已加载，点击启动代理开始拦截" });
+  </script>
+</body>
+</html>
