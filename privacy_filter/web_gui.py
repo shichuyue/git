@@ -289,6 +289,8 @@ def status():
 
 
 @app.route("/api/start", methods=["POST"])
+    # 启动前先释放端口
+    _free_port(PROXY_PORT)
 def start_proxy():
     global mitm_process
     with process_lock:
@@ -329,10 +331,18 @@ def start_proxy():
                  "--listen-port", str(PROXY_PORT),
                  "--set", "block_global=false"],
                 cwd=BASE_DIR,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 startupinfo=startup_info,
             )
+            # 等 1 秒确认进程还在
+            import time
+            time.sleep(1)
+            if mitm_process.poll() is not None:
+                return flask.jsonify({
+                    "ok": False,
+                    "error": f"mitmdump 启动后立即退出 (exit code={mitm_process.poll()})，请检查端口 8080 是否被占用"
+                }), 500
             return flask.jsonify({"ok": True, "message": "proxy started"})
         except FileNotFoundError as e:
             return flask.jsonify({
@@ -389,4 +399,22 @@ if __name__ == "__main__":
     print(f"隐私流量拦截代理 Web 界面启动中...")
     print(f"打开浏览器访问 http://127.0.0.1:{WEB_PORT}")
     print(f"确保系统代理已设置为 127.0.0.1:{PROXY_PORT}")
+def _free_port(port):
+    \"\"\"尝试释放指定端口上残留的进程\"\"\"
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"], capture_output=True, text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
+        for line in result.stdout.splitlines():
+            if f":{port} " in line and "LISTENING" in line:
+                parts = line.strip().split()
+                pid = parts[-1]
+                subprocess.run(["taskkill", "/F", "/PID", pid],
+                               capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
+    except Exception:
+        pass
+
+
     app.run(host="127.0.0.1", port=WEB_PORT, debug=False, threaded=True)
+
